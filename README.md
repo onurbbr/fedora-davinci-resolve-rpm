@@ -15,13 +15,19 @@ sudo dnf install rpm-build apr-util apr-util.i686 libcxx libcxx.i686 patchelf li
 git clone -b master https://github.com/onurbbr/fedora-davinci-resolve-rpm.git ~/rpmbuild
 ```
 
-## Step 3: Download and Copy the DaVinci Resolve File
+## Step 3: Create some folders for building
+```bash
+cd ~/rpmbuild
+mkdir BUILD BUILDROOT RPMS SOURCES SRPMS
+```
+
+## Step 4: Download and Copy the DaVinci Resolve File
 Download and extract the DaVinci Resolve .zip file (version 18.6.6 is used here). Then copy the .run file to the SOURCES directory in the cloned repository
 ```bash
 cp ~/Downloads/DaVinci_Resolve_18.6.6_Linux.run ~/rpmbuild/SOURCES
 ```
 
-## Step 4: Start the Packaging Process
+## Step 5: Start the Packaging Process
 Finally, start the RPM packaging process by running the following command:
 ```bash
 QA_RPATHS=$(( 0x0001|0x0002|0x0004|0x0008|0x0010|0x0020 )) rpmbuild -bb ~/rpmbuild/SPECS/davinci-resolve.spec
