@@ -2,7 +2,7 @@
 
 This guide provides a step-by-step process to build and install an RPM package for DaVinci Resolve on Fedora.
 
-## Step 1: Install Required Dependencies
+## Step 1: Install required dependencies
 
 First, you need to install the necessary dependencies for building the RPM package. Open your terminal and run the following command:
 
@@ -10,7 +10,7 @@ First, you need to install the necessary dependencies for building the RPM packa
 sudo dnf install rpm-build apr-util apr-util.i686 libcxx libcxx.i686 patchelf libxcrypt-compat
 ```
 
-## Step 2: Clone the Repository
+## Step 2: Clone the repository
 ```bash
 git clone -b master https://github.com/onurbbr/fedora-davinci-resolve-rpm.git ~/rpmbuild
 ```
@@ -21,22 +21,23 @@ cd ~/rpmbuild
 mkdir BUILD BUILDROOT RPMS SOURCES SRPMS
 ```
 
-## Step 4: Download and Copy the DaVinci Resolve File
+## Step 4: Download and copy the DaVinci Resolve file
 Download and extract the DaVinci Resolve .zip file (version 18.6.6 is used here). Then copy the .run file to the SOURCES directory in the cloned repository
 ```bash
 cp ~/Downloads/DaVinci_Resolve_18.6.6_Linux.run ~/rpmbuild/SOURCES
 ```
 
-## Step 5: Check the location of the files before starting the installation.
+## Step 5: Check the location of the files before starting the build process.
 The file locations need to be as follows:
 ![Resim](Screenshot_20240812_153034.png)
 
 
-## Step 6: Start the Packaging Process
+## Step 6: Start the packaging process
 Finally, start the RPM packaging process by running the following command:
 ```bash
 QA_RPATHS=$(( 0x0001|0x0002|0x0004|0x0008|0x0010|0x0020 )) rpmbuild -bb ~/rpmbuild/SPECS/davinci-resolve.spec
 ```
+It may take 10 to 15 minutes depending on your system (My system has 6 cores and 12 threads).
 
 ## Step 7: Install the generated rpm file
 The generated rpm file is located under:
