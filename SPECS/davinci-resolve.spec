@@ -1,10 +1,10 @@
 Name:           davinci-resolve
-Version:        19.0
+Version:        19.0.1
 Release:        1%{?dist}
 Summary:        Revolutionary new tools for editing, visual effects, color correction and professional audio post production, all in a single application!
 License:        Proprietary
 URL:            https://www.blackmagicdesign.com/products/davinciresolve
-Source0:        DaVinci_Resolve_19.0_Linux.run
+Source0:        DaVinci_Resolve_19.0.1_Linux.run
 AutoReqProv:    no
 
 %description
