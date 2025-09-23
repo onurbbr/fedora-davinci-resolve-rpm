@@ -1,10 +1,10 @@
 Name:           davinci-resolve
-Version:        20.2
+Version:        20.2.1
 Release:        1%{?dist}
 Summary:        Revolutionary new tools for editing, visual effects, color correction and professional audio post production, all in a single application!
 License:        Proprietary
 URL:            https://www.blackmagicdesign.com/products/davinciresolve
-Source0:        DaVinci_Resolve_20.2_Linux.run
+Source0:        DaVinci_Resolve_20.2.1_Linux.run
 AutoReqProv:    no
 
 %description
@@ -79,6 +79,14 @@ sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Develo
 sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/8_slack_notification_by_render_job.py
 sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/python_get_resolve.py
 
+# Fixing icon problems
+mv -f %{_builddir}/resolve/graphics/DV_Resolve.png %{_builddir}/resolve/graphics/davinci-resolve.png
+mv -f %{_builddir}/resolve/graphics/DV_ResolveProj.png %{_builddir}/resolve/graphics/davinci-panels.png
+mv -f %{_builddir}/resolve/graphics/blackmagicraw-player_256x256_apps.png %{_builddir}/resolve/graphics/blackmagicraw-player.png
+mv -f %{_builddir}/resolve/graphics/blackmagicraw-speedtest_256x256_apps.png %{_builddir}/resolve/graphics/blackmagicraw-speedtest.png
+find %{_builddir}/resolve -type f -name "DaVinciResolve.desktop" -exec sed -i "s|/opt/resolve/graphics/DV_Resolve.png|davinci-resolve|g" {} +
+find %{_builddir}/resolve -type f -name "DaVinciControlPanelsSetup.desktop" -exec sed -i "s|/opt/resolve/graphics/DV_Panels.png|davinci-panels|g" {} +
+
 %install
 mkdir -p -m 0755 %{buildroot}/opt/resolve/{configs,DolbyVision,easyDCP,Fairlight,GPUCache,logs,Media,"Resolve Disk Database",.crashreport,.license,.LUT}
 cp -rf %{_builddir}/resolve/* %{buildroot}/opt/resolve/
@@ -95,9 +103,11 @@ install -Dm0644 %{buildroot}/opt/resolve/share/DaVinciResolveCaptureLogs.desktop
 install -Dm0644 %{buildroot}/opt/resolve/share/blackmagicraw-player.desktop -t %{buildroot}/usr/share/applications
 install -Dm0644 %{buildroot}/opt/resolve/share/blackmagicraw-speedtest.desktop -t %{buildroot}/usr/share/applications
 
-# Desktop system configurations
-install -Dm0644 %{buildroot}/opt/resolve/graphics/DV_Resolve.png -t %{buildroot}/usr/share/icons/hicolor/64x64/apps
-install -Dm0644 %{buildroot}/opt/resolve/graphics/DV_ResolveProj.png -t %{buildroot}/usr/share/icons/hicolor/64x64/apps
+# Mime types and application icons
+install -Dm0644 %{buildroot}/opt/resolve/graphics/davinci-resolve.png -t %{buildroot}/usr/share/icons/hicolor/64x64/apps
+install -Dm0644 %{buildroot}/opt/resolve/graphics/davinci-panels.png -t %{buildroot}/usr/share/icons/hicolor/64x64/apps
+install -Dm0644 %{buildroot}/opt/resolve/graphics/blackmagicraw-player.png -t %{buildroot}/usr/share/icons/hicolor/64x64/apps
+install -Dm0644 %{buildroot}/opt/resolve/graphics/blackmagicraw-speedtest.png -t %{buildroot}/usr/share/icons/hicolor/64x64/apps
 install -Dm0644 %{buildroot}/opt/resolve/share/resolve.xml -t %{buildroot}/usr/share/mime/packages
 
 # Udev rules
@@ -113,8 +123,12 @@ install -Dm0644 %{buildroot}/opt/resolve/share/etc/udev/rules.d/99-DavinciPanel.
 %{_datadir}/applications/DaVinciResolveCaptureLogs.desktop
 %{_datadir}/applications/blackmagicraw-player.desktop
 %{_datadir}/applications/blackmagicraw-speedtest.desktop
-%{_datadir}/icons/hicolor/64x64/apps/DV_Resolve.png
-%{_datadir}/icons/hicolor/64x64/apps/DV_ResolveProj.png
+%{_datadir}/icons/hicolor/64x64/apps/davinci-resolve.png
+%{_datadir}/icons/hicolor/64x64/apps/davinci-panels.png
+%{_datadir}/icons/hicolor/64x64/apps/blackmagicraw-player.png
+%{_datadir}/icons/hicolor/64x64/apps/blackmagicraw-speedtest.png
+%{_datadir}/icons/hicolor/64x64/apps/
+%{_datadir}/icons/hicolor/64x64/apps/
 %{_datadir}/mime/packages/resolve.xml
 %{_udevrulesdir}/99-BlackmagicDevices.rules
 %{_udevrulesdir}/99-ResolveKeyboardHID.rules
