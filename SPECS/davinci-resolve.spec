@@ -1,10 +1,10 @@
 Name:           davinci-resolve
-Version:        20.2.1
+Version:        20.2.2
 Release:        1%{?dist}
 Summary:        Revolutionary new tools for editing, visual effects, color correction and professional audio post production, all in a single application!
 License:        Proprietary
 URL:            https://www.blackmagicdesign.com/products/davinciresolve
-Source0:        DaVinci_Resolve_20.2.1_Linux.run
+Source0:        DaVinci_Resolve_20.2.2_Linux.run
 AutoReqProv:    no
 
 %description
@@ -52,8 +52,6 @@ ln -s /usr/lib/libc++.so.1.0 %{_builddir}/resolve/libs/libc++.so.1
 ln -s /usr/lib/libaprutil-1.so.0 %{_builddir}/resolve/libs/libaprutil-1.so.0
 
 # Modify .desktop files and icon, apply category fixes for plasma
-sed -i 's|Icon=blackmagicraw-player|Icon=RESOLVE_INSTALL_LOCATION/graphics/blackmagicraw-player_256x256_apps.png|g' %{_builddir}/resolve/share/blackmagicraw-player.desktop
-sed -i 's|Icon=blackmagicraw-speedtest|Icon=RESOLVE_INSTALL_LOCATION/graphics/blackmagicraw-speedtest_256x256_apps.png|g' %{_builddir}/resolve/share/blackmagicraw-speedtest.desktop
 echo "StartupWMClass=resolve" | tee -a %{_builddir}/resolve/share/DaVinciResolve.desktop
 echo "Categories=Qt;KDE;Graphics;2DGraphics;RasterGraphics;" | tee -a %{_builddir}/resolve/share/DaVinciResolve.desktop
 echo "Categories=Qt;KDE;Utility;" | tee -a %{_builddir}/resolve/share/DaVinciControlPanelsSetup.desktop
