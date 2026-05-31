@@ -1,11 +1,13 @@
 Name:           davinci-resolve
-Version:        20.2.2
+Version:        20.3.3
 Release:        1%{?dist}
-Summary:        Revolutionary new tools for editing, visual effects, color correction and professional audio post production, all in a single application!
+Summary:        Professional video editing, color correction, visual effects and audio post-production.
 License:        Proprietary
-URL:            https://www.blackmagicdesign.com/products/davinciresolve
-Source0:        DaVinci_Resolve_20.2.2_Linux.run
+URL:            [https://www.blackmagicdesign.com/products/davinciresolve](https://www.blackmagicdesign.com/products/davinciresolve)
+Source0:        DaVinci_Resolve_%{version}_Linux.run
 AutoReqProv:    no
+
+Requires:       apr, apr-util, alsa-plugins-pulseaudio, libnsl, libxcrypt-compat, libcxx, patchelf
 
 %description
 Revolutionary new tools for editing, visual effects, color correction and professional audio post production, all in a single application!
@@ -23,33 +25,77 @@ chmod -R u+rwX,go+rX,go-w %{_builddir}/resolve
 # Extract dvpanel framework libraries to resolve's library folder
 pushd "%{_builddir}/resolve/share/panels"
 tar -zxvf dvpanel-framework-linux-x86_64.tgz
+rm dvpanel-framework-linux-x86_64.tgz
 chmod -R u+rwX,go+rX,go-w "%{_builddir}/resolve/share/panels/lib"
 mv *.so "%{_builddir}/resolve/libs"
 mv lib/* "%{_builddir}/resolve/libs"
 popd
 
 # Remove unnecessary installer
-rm -rf %{_builddir}/resolve/installer %{_builddir}/resolve/installer* %{_builddir}/resolve/AppRun %{_builddir}/resolve/AppRun*
+rm -rf %{_builddir}/resolve/installer* %{_builddir}/resolve/AppRun*
 
 # Fix permissions for directories (Part 2)
 find %{_builddir}/resolve -type d -exec chmod 0755 {} \;
 
-# Fix permissions for files (Part 3) and patch ELF files
-find %{_builddir}/resolve -type f -exec chmod 0755 {} \; -exec sh -c '
-for file in "$@"; do
-  if [ -f "$file" ] && [ "$(od -t x1 -N 4 "$file")" = *"7f 45 4c 46"* ]; then
-    patchelf --set-rpath '/opt/resolve/libs:/opt/resolve/libs/plugins/sqldrivers:/opt/resolve/libs/plugins/xcbglintegrations:/opt/resolve/libs/plugins/imageformats:/opt/resolve/libs/plugins/platforms:/opt/resolve/libs/Fusion:/opt/resolve/plugins:/opt/resolve/bin:/opt/resolve/BlackmagicRAWSpeedTest/BlackmagicRawAPI:/opt/resolve/BlackmagicRAWSpeedTest/plugins/platforms:/opt/resolve/BlackmagicRAWSpeedTest/plugins/imageformats:/opt/resolve/BlackmagicRAWSpeedTest/plugins/mediaservice:/opt/resolve/BlackmagicRAWSpeedTest/plugins/audio:/opt/resolve/BlackmagicRAWSpeedTest/plugins/xcbglintegrations:/opt/resolve/BlackmagicRAWSpeedTest/plugins/bearer:/opt/resolve/BlackmagicRAWPlayer/BlackmagicRawAPI:/opt/resolve/BlackmagicRAWPlayer/plugins/mediaservice:/opt/resolve/BlackmagicRAWPlayer/plugins/imageformats:/opt/resolve/BlackmagicRAWPlayer/plugins/audio:/opt/resolve/BlackmagicRAWPlayer/plugins/platforms:/opt/resolve/BlackmagicRAWPlayer/plugins/xcbglintegrations:/opt/resolve/BlackmagicRAWPlayer/plugins/bearer:/opt/resolve/Onboarding/plugins/xcbglintegrations:/opt/resolve/Onboarding/plugins/qtwebengine:/opt/resolve/Onboarding/plugins/platforms:/opt/resolve/Onboarding/plugins/imageformats:/opt/resolve/DaVinci\ Control\ Panels\ Setup/plugins/platforms:/opt/resolve/DaVinci\ Control\ Panels\ Setup/plugins/imageformats:/opt/resolve/DaVinci\ Control\ Panels\ Setup/plugins/bearer:/opt/resolve/DaVinci\ Control\ Panels\ Setup/AdminUtility/PlugIns/DaVinciKeyboards:/opt/resolve/DaVinci\ Control\ Panels\ Setup/AdminUtility/PlugIns/DaVinciPanels:$ORIGIN' '$file'
+# Fix permissions for files (Part 3)
+find %{_builddir}/resolve -type f -exec chmod 0644 {} \;
+
+# Grant executable bit only to ELF binaries and shell scripts
+{ set +x; } 2>/dev/null
+find %{_builddir}/resolve -type f | while read file; do
+  if file "$file" 2>/dev/null | grep -qE 'ELF|shell script'; then
+    chmod 0755 "$file"
   fi
-done' sh {} +
+done
+{ set -x; } 2>/dev/null
+
+# Patch all ELF binaries: fix/clean broken RPATHs automatically
+{ set +x; } 2>/dev/null
+find %{_builddir}/resolve -type f | while read file; do
+  file "$file" 2>/dev/null | grep -q 'ELF' || continue
+  current_rpath=$(patchelf --print-rpath "$file" 2>/dev/null) || continue
+
+  # If runpath is empty, remove it entirely (0x0010)
+  if [ -z "$current_rpath" ]; then
+    patchelf --force-rpath --remove-rpath "$file" 2>/dev/null || true
+    continue
+  fi
+
+  # Evaluate each path entry individually
+  new_rpath=$(echo "$current_rpath" | tr ':' '\n' | while read entry; do
+    case "$entry" in
+      '$ORIGIN'*)
+        # $ORIGIN-based: valid, keep — strip trailing slash
+        echo "${entry%/}"
+        ;;
+      /opt/resolve*)
+        # Target install path: valid, keep — strip trailing slash
+        echo "${entry%/}"
+        ;;
+      ./*|./|.)
+        # Insecure relative path (0x0004): replace with $ORIGIN
+        echo '$ORIGIN'
+        ;;
+      *)
+        # Anything else (build server paths, etc.) → discard
+        ;;
+    esac
+  done | sort -u | tr '\n' ':' | sed 's/:$//')
+
+  # If no valid entries remain, fall back to $ORIGIN
+  [ -z "$new_rpath" ] && new_rpath='$ORIGIN'
+
+  # Force RPATH over RUNPATH to ensure $ORIGIN resolution works correctly
+  patchelf --force-rpath --set-rpath "$new_rpath" "$file" 2>/dev/null || true
+done
+{ set -x; } 2>/dev/null
 
 # Use system libraries (some of resolve's libraries are broken)
 rm -f %{_builddir}/resolve/libs/libglib*
 rm -f %{_builddir}/resolve/libs/libgio*
 rm -f %{_builddir}/resolve/libs/libgmodule*
-rm -f %{_builddir}/resolve/libs/libc++.so.1
 rm -f %{_builddir}/resolve/libs/libaprutil-1.so.0
-ln -s /usr/lib/libc++.so.1.0 %{_builddir}/resolve/libs/libc++.so.1
-ln -s /usr/lib/libaprutil-1.so.0 %{_builddir}/resolve/libs/libaprutil-1.so.0
+ln -s /usr/lib64/libaprutil-1.so.0 %{_builddir}/resolve/libs/libaprutil-1.so.0
 
 # Modify .desktop files and icon, apply category fixes for plasma
 echo "StartupWMClass=resolve" | tee -a %{_builddir}/resolve/share/DaVinciResolve.desktop
@@ -63,19 +109,8 @@ echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTRS{idVendor}=="096e", MOD
 # Set resolve's location to desktop files
 find %{_builddir}/resolve -type f \( -name "*.desktop" -o -name "*.directory" -o -name "*.menu" \) -exec sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/resolve|g" {} +
 
-# Fixing ambiguous python shebangs (rpm-macros has a problem with this. I had to fix it manually)
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/9_export_timeline.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/7_add_subclips_to_timeline.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/10_handle_media_pool_clip_markers.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/3_grade_and_render_all_timelines.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/6_get_current_media_thumbnail.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/2_compositions_from_timeline_clips.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/1_sorted_timeline_from_folder.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/5_get_project_information.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/4_display_project_and_folder_tree.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/11_add_subclips_to_mediapool.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/8_slack_notification_by_render_job.py
-sed -i 's|/usr/bin/env python|/usr/bin/env python3|' %{_builddir}/resolve/Developer/Scripting/Examples/python_get_resolve.py
+# Fix Exec path to use system-wide binary
+sed -i "s|^Exec=/opt/resolve/bin/resolve|Exec=resolve|g" %{_builddir}/resolve/share/DaVinciResolve.desktop
 
 # Fixing icon problems
 mv -f %{_builddir}/resolve/graphics/DV_Resolve.png %{_builddir}/resolve/graphics/davinci-resolve.png
@@ -113,9 +148,14 @@ install -Dm0644 %{buildroot}/opt/resolve/share/etc/udev/rules.d/99-BlackmagicDev
 install -Dm0644 %{buildroot}/opt/resolve/share/etc/udev/rules.d/99-ResolveKeyboardHID.rules -t %{buildroot}/%{_udevrulesdir}
 install -Dm0644 %{buildroot}/opt/resolve/share/etc/udev/rules.d/99-DavinciPanel.rules -t %{buildroot}/%{_udevrulesdir}
 
+# Symlinks for system-wide binary access
+install -d %{buildroot}/usr/bin
+ln -sf /opt/resolve/bin/resolve %{buildroot}/usr/bin/resolve
+
 %files
 /opt/resolve
 /opt/resolve/*
+%{_bindir}/resolve
 %{_datadir}/applications/DaVinciResolve.desktop
 %{_datadir}/applications/DaVinciControlPanelsSetup.desktop
 %{_datadir}/applications/DaVinciResolveCaptureLogs.desktop
@@ -133,7 +173,15 @@ install -Dm0644 %{buildroot}/opt/resolve/share/etc/udev/rules.d/99-DavinciPanel.
 %{_udevrulesdir}/99-DavinciPanel.rules
 
 %changelog
-* Mon Aug 12 2024 Onur BÜBER <onurbuber6778@gmail.com>
-- First Fedora release (Created from Arch AUR repo)
-- Updated permissions and patchelf rpath handling
-- Fixed BlackmagicRaw applications icon issue
+* Sat May 30 2026 Onur BÜBER <onurbuber@engineer.com>
+- Upgraded DaVinci Resolve to 20.3.3
+- Keep bundled libc++ to avoid symbol mismatch Segfault (Thanks to StephR74)
+- Replaced shebang-related permission fixes with smart executable detection (ELF/shell script only)
+- Added automatic RPATH/RUNPATH cleanup via patchelf to fix check-rpaths errors without QA_RPATHS bypass
+  - Removes empty runpaths (0x0010)
+  - Replaces insecure relative paths like './' with $ORIGIN (0x0004)
+  - Discards leftover build server absolute paths (0x0002, 0x0020)
+  - Preserves valid $ORIGIN-based and /opt/resolve paths
+  - Forces RPATH over RUNPATH to ensure $ORIGIN resolution works correctly on Fedora
+- Added /usr/bin/resolve symlink for system-wide binary access
+- Fixed Exec path in DaVinciResolve.desktop to use system-wide binary
