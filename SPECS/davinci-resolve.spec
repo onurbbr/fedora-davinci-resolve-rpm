@@ -1,5 +1,5 @@
 Name:           davinci-resolve
-Version:        20.3.3
+Version:        21.0
 Release:        1%{?dist}
 Summary:        Professional video editing, color correction, visual effects and audio post-production.
 License:        Proprietary
@@ -94,7 +94,9 @@ done
 rm -f %{_builddir}/resolve/libs/libglib*
 rm -f %{_builddir}/resolve/libs/libgio*
 rm -f %{_builddir}/resolve/libs/libgmodule*
+rm -f %{_builddir}/resolve/libs/libc++.so.1
 rm -f %{_builddir}/resolve/libs/libaprutil-1.so.0
+ln -s /usr/lib64/libc++.so.1.0 %{_builddir}/resolve/libs/libc++.so.1
 ln -s /usr/lib64/libaprutil-1.so.0 %{_builddir}/resolve/libs/libaprutil-1.so.0
 
 # Modify .desktop files and icon, apply category fixes for plasma
