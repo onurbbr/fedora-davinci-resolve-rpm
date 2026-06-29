@@ -1,5 +1,5 @@
 Name:           davinci-resolve
-Version:        21.0
+Version:        21.0.1
 Release:        1%{?dist}
 Summary:        Professional video editing, color correction, visual effects and audio post-production.
 License:        Proprietary
